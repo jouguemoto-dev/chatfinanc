@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isSignedIn() && request.auth.uid == existing().get('userId', '');
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid 
+        && data.email is string && data.email.size() <= 200
+        && (data.displayName == null || data.displayName is string)
+        && (data.photoURL == null || data.photoURL is string);
+    }
+
+    function isValidTransaction(data) {
+      return data.userId == request.auth.uid
+        && data.amount is number
+        && data.type in ['income', 'expense', 'transfer', 'investment']
+        && data.category is string && data.category.size() <= 100
+        && (data.get('subcategory', null) == null || (data.subcategory is string && data.subcategory.size() <= 100))
+        && data.description is string && data.description.size() <= 500
+        && data.date is string && data.date.size() <= 20
+        && data.status in ['pending', 'confirmed', 'canceled']
+        && data.isRecurring is bool
+        && data.isDeleted is bool
+        && (data.get('cardId', null) == null || isValidId(data.cardId))
+        && data.createdAt == request.time
+        && data.keys().hasAll(['userId', 'amount', 'type', 'category', 'date', 'description', 'status', 'isRecurring', 'isDeleted', 'createdAt'])
+        && data.keys().size() >= 10;
+    }
+
+    function isUpdateValidTransaction(data, prev) {
+      return data.userId == prev.userId
+        && data.amount is number
+        && data.type in ['income', 'expense', 'transfer', 'investment']
+        && data.category is string && data.category.size() <= 100
+        && (data.get('subcategory', null) == null || (data.subcategory is string && data.subcategory.size() <= 100))
+        && (data.get('cardId', null) == null || isValidId(data.cardId))
+        && data.status in ['pending', 'confirmed', 'canceled']
+        && (data.get('updatedAt', null) == null || data.updatedAt == request.time || data.updatedAt == prev.get('updatedAt', null))
+        && data.createdAt == prev.createdAt;
+    }
+
+    function isValidCard(data) {
+      return data.userId == request.auth.uid
+        && data.name is string && data.name.size() <= 100
+        && data.bank is string && data.bank.size() <= 100
+        && data.limit is number
+        && data.brand is string
+        && data.dueDay is number
+        && (data.get('bestDay', null) == null || data.bestDay is number)
+        && data.color is string
+        && data.isDeleted is bool
+        && data.createdAt == request.time
+        && data.keys().hasAll(['userId', 'name', 'bank', 'limit', 'brand', 'dueDay', 'color', 'isDeleted', 'createdAt']);
+    }
+
+    function isUpdateValidCard(data, prev) {
+      return data.userId == prev.userId
+        && data.createdAt == prev.createdAt
+        && data.name is string && data.name.size() <= 100
+        && data.bank is string && data.bank.size() <= 100
+        && data.limit is number
+        && data.brand is string
+        && data.dueDay is number
+        && (data.get('bestDay', null) == null || data.bestDay is number)
+        && data.color is string
+        && data.isDeleted is bool
+        && (data.get('updatedAt', null) == null || data.updatedAt == request.time || data.updatedAt == prev.get('updatedAt', null))
+        && (data.get('deletedAt', null) == null || data.deletedAt == request.time || data.deletedAt == prev.get('deletedAt', null));
+    }
+
+    function isValidGoal(data) {
+      return data.userId == request.auth.uid
+        && data.name is string && data.name.size() <= 200
+        && data.targetAmount is number
+        && data.currentAmount is number
+        && data.category is string
+        && data.dueDate is string
+        && data.isDeleted is bool
+        && data.createdAt == request.time
+        && data.keys().hasAll(['userId', 'name', 'targetAmount', 'currentAmount', 'category', 'dueDate', 'isDeleted', 'createdAt']);
+    }
+
+    function isUpdateValidGoal(data, prev) {
+      return data.userId == prev.userId
+        && data.createdAt == prev.createdAt
+        && data.name is string && data.name.size() <= 200
+        && data.targetAmount is number
+        && data.currentAmount is number
+        && data.isDeleted is bool
+        && (data.get('updatedAt', null) == null || data.updatedAt == request.time || data.updatedAt == prev.get('updatedAt', null))
+        && (data.get('deletedAt', null) == null || data.deletedAt == request.time || data.deletedAt == prev.get('deletedAt', null));
+    }
+
+    // --- Match Rules ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'email']);
+    }
+
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && isOwner(existing().get('userId', ''));
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidTransaction(incoming());
+      allow update: if isSignedIn() && isDocOwner() 
+        && (isUpdateValidTransaction(incoming(), existing()) || incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted', 'deletedAt']));
+      allow delete: if isSignedIn() && isDocOwner();
+    }
+
+    match /cards/{cardId} {
+      allow get: if isSignedIn() && isOwner(existing().get('userId', ''));
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidCard(incoming());
+      allow update: if isSignedIn() && isDocOwner() 
+        && (isUpdateValidCard(incoming(), existing()) || incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted', 'deletedAt']));
+      allow delete: if isSignedIn() && isDocOwner();
+    }
+
+    match /goals/{goalId} {
+      allow get: if isSignedIn() && isOwner(existing().get('userId', ''));
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidGoal(incoming());
+      allow update: if isSignedIn() && isDocOwner() 
+        && (isUpdateValidGoal(incoming(), existing()) || incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted', 'deletedAt']));
+      allow delete: if isSignedIn() && isDocOwner();
+    }
+
+    match /chats/{chatId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidId(chatId);
+      allow update: if isSignedIn() && isOwner(existing().userId) 
+        && incoming().userId == existing().userId;
+      
+      match /messages/{messageId} {
+        // Use get() with extreme care as it costs 1 read per evaluation.
+        // For subcollections, checking the parent document's userId is standard.
+        allow list, get: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)).data.userId);
+        allow create: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)).data.userId)
+          && incoming().role in ['user', 'assistant']
+          && incoming().timestamp == request.time;
+      }
+    }
+  }
+}
