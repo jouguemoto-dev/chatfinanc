@@ -22,12 +22,19 @@ import { GoalModal } from '../components/modals/GoalModal';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
 
 export const Goals: React.FC = () => {
-  const { goals, moveToTrash } = useFinance();
+  const { goals, trashGoals, moveToTrash } = useFinance();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<string | null>(null);
   const [editingGoal, setEditingGoal] = React.useState<Goal | null>(null);
-  const [hiddenMockIds, setHiddenMockIds] = React.useState<string[]>([]);
+  const [hiddenMockIds, setHiddenMockIds] = React.useState<string[]>(() => {
+    const saved = localStorage.getItem('hidden_mock_goals');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('hidden_mock_goals', JSON.stringify(hiddenMockIds));
+  }, [hiddenMockIds]);
 
   const handleEdit = (goal: Goal) => {
     setEditingGoal(goal);
@@ -64,7 +71,8 @@ export const Goals: React.FC = () => {
   ];
 
   const visibleMockGoals = allMockGoals.filter(m => !hiddenMockIds.includes(m.id));
-  const displayGoals = goals.length > 0 ? goals : visibleMockGoals;
+  const hasAnyRealGoal = goals.length > 0 || trashGoals.length > 0;
+  const displayGoals = hasAnyRealGoal ? goals : visibleMockGoals;
 
   const getIcon = (category: string) => {
     switch (category) {

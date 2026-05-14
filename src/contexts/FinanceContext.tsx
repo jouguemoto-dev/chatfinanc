@@ -67,12 +67,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [trashGoals, setTrashGoals] = useState<Goal[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setTransactions([]);
+      setCards([]);
+      setGoals([]);
+      setTrashTransactions([]);
+      setTrashCards([]);
+      setTrashGoals([]);
+      return;
+    }
 
     // Queries para dados ativos
-    const tQuery = query(collection(db, 'transactions'), where('userId', '==', user.uid), where('isDeleted', '!=', true), orderBy('isDeleted'), orderBy('createdAt', 'desc'));
-    const cQuery = query(collection(db, 'cards'), where('userId', '==', user.uid), where('isDeleted', '!=', true));
-    const gQuery = query(collection(db, 'goals'), where('userId', '==', user.uid), where('isDeleted', '!=', true));
+    const tQuery = query(collection(db, 'transactions'), where('userId', '==', user.uid), where('isDeleted', '==', false), orderBy('createdAt', 'desc'));
+    const cQuery = query(collection(db, 'cards'), where('userId', '==', user.uid), where('isDeleted', '==', false));
+    const gQuery = query(collection(db, 'goals'), where('userId', '==', user.uid), where('isDeleted', '==', false));
 
     // Queries para lixeira
     const tTrashQuery = query(collection(db, 'transactions'), where('userId', '==', user.uid), where('isDeleted', '==', true), orderBy('deletedAt', 'desc'));

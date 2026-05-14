@@ -17,12 +17,20 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
     addTransaction, updateTransaction, addCard, addGoal, clearAllData,
     transactions, cards, goals 
   } = useFinance();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: `Olá ${user?.displayName || 'João'}! Analisei seus registros financeiros e estou pronto para ajudar. O que deseja fazer?`, timestamp: new Date() }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setMessages([]);
+      return;
+    }
+    setMessages([
+      { role: 'assistant', content: `Olá ${user?.displayName || 'Usuário'}! Analisei seus registros financeiros e estou pronto para ajudar. O que deseja fazer?`, timestamp: new Date() }
+    ]);
+  }, [user]);
 
   const getFinancialContext = () => {
     const activeTransactions = transactions.slice(0, 20).map(t => 
