@@ -113,9 +113,19 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Ops, tive um probleminha. Pode repetir?', timestamp: new Date() }]);
+      let errorMessage = 'Ops, tive um probleminha técnico. Pode repetir?';
+      
+      if (error?.message?.includes('GEMINI_API_KEY')) {
+        errorMessage = 'A chave da API (GEMINI_API_KEY) não foi configurada. Se você estiver no Vercel, adicione-a nas variáveis de ambiente.';
+      }
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: errorMessage, 
+        timestamp: new Date() 
+      }]);
     } finally {
       setIsTyping(false);
     }

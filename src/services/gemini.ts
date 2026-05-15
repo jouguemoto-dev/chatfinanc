@@ -1,6 +1,17 @@
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not defined in the environment.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 const addTransactionTool: FunctionDeclaration = {
   name: "addTransaction",
@@ -99,6 +110,7 @@ export async function chatWithFinai(message: string, history: any[], context?: s
     ? `${FINANCE_AGENT_PROMPT}\n\nCONTEXTO ATUAL DO USUÁRIO:\n${context}`
     : FINANCE_AGENT_PROMPT;
 
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [

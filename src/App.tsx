@@ -20,14 +20,13 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
 
+  console.log('[AppContent] user:', !!user, 'loading:', loading);
+
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-black">
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full"
-        />
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505]">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-white/50 text-sm animate-pulse">Carregando carteira...</p>
       </div>
     );
   }
