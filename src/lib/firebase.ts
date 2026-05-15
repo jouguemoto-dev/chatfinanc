@@ -8,47 +8,55 @@ import {
   signInWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Utility to get environment variables safely across environments
+const getEnv = (key: string) => {
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+    return (import.meta as any).env[key];
+  }
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  return undefined;
+};
 
 // Try to get values from environment, fallback to config file
 const config = {
-  apiKey: (import.meta as any).env?.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
-  authDomain: (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
-  projectId: (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
-  storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
-  messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
-  appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+  apiKey: getEnv('VITE_FIREBASE_API_KEY') || firebaseConfig.apiKey,
+  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN') || firebaseConfig.authDomain,
+  projectId: getEnv('VITE_FIREBASE_PROJECT_ID') || firebaseConfig.projectId,
+  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET') || firebaseConfig.storageBucket,
+  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID') || firebaseConfig.messagingSenderId,
+  appId: getEnv('VITE_FIREBASE_APP_ID') || firebaseConfig.appId,
 };
 
-const databaseId = (import.meta as any).env?.VITE_FIREBASE_FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId;
+const databaseId = getEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || firebaseConfig.firestoreDatabaseId;
 
 let app;
 try {
   app = getApps().length > 0 ? getApp() : initializeApp(config);
 } catch (error) {
-  console.error("Firebase init error:", error);
-  app = initializeApp(config);
+  console.error("Firebase init error, attempting re-init:", error);
+  try {
+    app = initializeApp(config);
+  } catch (reInitError) {
+    console.error("Firebase critical failure:", reInitError);
+    // Last resort dummy app to avoid top-level crash if possible
+    app = getApps()[0];
+  }
 }
 
-export const db = getFirestore(app, databaseId);
+// Initialize Firestore and Auth
+// For databaseId, it MUST be undefined if it's the default database or falsy
+export const db = getFirestore(app, (databaseId && databaseId !== '(default)') ? databaseId : undefined);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile };
 export const logout = () => signOut(auth);
-
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-testConnection();
 
 export enum OperationType {
   CREATE = 'create',

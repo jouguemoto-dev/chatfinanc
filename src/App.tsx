@@ -24,9 +24,10 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505]">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-white/50 text-sm animate-pulse">Carregando carteira...</p>
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505] text-white">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-white rounded-full animate-spin mb-4" />
+        <h1 className="text-4xl font-bold tracking-tighter italic mb-4">Finai</h1>
+        <p className="text-white/50 text-xs font-bold uppercase tracking-widest animate-pulse">Carregando carteira digital...</p>
       </div>
     );
   }

@@ -134,9 +134,29 @@ export const Login: React.FC = () => {
         </div>
 
         <button
-          onClick={signInWithGoogle}
+          onClick={async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              await signInWithGoogle();
+            } catch (err: any) {
+              console.error('[Google Login Error]', err);
+              if (err.code === 'auth/popup-blocked') {
+                setError('O popup foi bloqueado pelo navegador. Por favor, permita popups para este site.');
+              } else if (err.code === 'auth/popup-closed-by-user') {
+                setError('O login foi cancelado antes de ser concluído.');
+              } else if (err.code === 'auth/unauthorized-domain') {
+                setError(`Este domínio (${window.location.hostname}) não está autorizado no Console do Firebase.`);
+              } else {
+                setError(`Erro no Google Login: ${err.message || 'Erro desconhecido'}`);
+              }
+            } finally {
+              setLoading(false);
+            }
+          }}
           type="button"
-          className="w-full py-4 px-6 bg-white/5 text-slate-300 font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all active:scale-95 border border-white/10"
+          disabled={loading}
+          className="w-full py-4 px-6 bg-white/5 text-slate-300 font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-white/10 transition-all active:scale-95 border border-white/10 disabled:opacity-50"
         >
           <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 opacity-80" />
           Google
