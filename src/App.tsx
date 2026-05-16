@@ -62,10 +62,10 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#050505] text-white">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-white rounded-full animate-spin mb-4" />
-        <h1 className="text-4xl font-bold tracking-tighter italic mb-4">Finai</h1>
-        <p className="text-white/50 text-xs font-bold uppercase tracking-widest animate-pulse">Carregando carteira digital...</p>
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#000000] text-white">
+        <div className="w-12 h-12 border-2 border-indigo-600 border-t-white rounded-full animate-spin mb-8" />
+        <h1 className="text-5xl font-black tracking-tighter italic mb-4 pr-6 uppercase select-none">RAIXI</h1>
+        <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Sincronizando Dados</p>
       </div>
     );
   }
@@ -89,15 +89,15 @@ function AppContent() {
   return (
     <div className="flex h-screen overflow-hidden bg-bg-dark flex-col lg:flex-row">
       {/* Mobile Header */}
-      <header className="lg:hidden h-16 flex items-center justify-between px-6 bg-black/40 backdrop-blur-sm border-b border-white/5 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <div className="w-4 h-4 border-2 border-white rounded-sm rotate-45" />
+      <header className="lg:hidden h-20 flex items-center justify-between px-6 bg-black border-b border-white/5 shrink-0 z-50">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="w-5 h-5 border-2 border-white rounded-sm rotate-45" />
           </div>
-          <span className="font-bold tracking-tighter text-lg bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent italic">Finai</span>
+          <span className="font-black tracking-tighter text-2xl bg-white bg-clip-text text-transparent italic pr-4 select-none">RAIXI</span>
         </div>
-        <button onClick={logout} className="p-2 text-slate-500 hover:text-white transition-colors">
-          <LogOut className="w-5 h-5" />
+        <button onClick={logout} className="p-2 text-white/40 hover:text-white transition-colors">
+          <LogOut className="w-6 h-6" />
         </button>
       </header>
 

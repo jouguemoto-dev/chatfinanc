@@ -23,6 +23,8 @@ export interface Transaction {
   status: TransactionStatus;
   cardId?: string;
   isRecurring: boolean;
+  installments?: number;
+  installmentNumber?: number;
   isDeleted?: boolean;
   deletedAt?: any;
   createdAt: any;

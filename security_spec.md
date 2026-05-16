@@ -1,4 +1,4 @@
-# Security Specification - Finai
+# Security Specification - RAIXI
 
 ## Data Invariants
 1. A transaction must belong to the authenticated user (`userId == request.auth.uid`).

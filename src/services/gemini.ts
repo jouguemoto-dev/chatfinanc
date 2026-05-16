@@ -81,7 +81,7 @@ const upsertMemoryTool: FunctionDeclaration = {
 };
 
 const FINANCE_AGENT_PROMPT = `
-Você é o Finai, um estrategista financeiro pessoal de elite de nível 3. Sua inteligência é baseada em análise profunda de dados e **aprendizado contínuo**.
+Você é o RAIXI, um estrategista financeiro pessoal de elite de nível 3. Sua inteligência é baseada em análise profunda de dados e **aprendizado contínuo**.
 
 SUA MISSÃO:
 Transformar o caos financeiro em clareza absoluta e crescimento patrimonial.
@@ -121,7 +121,7 @@ const updateTransactionTool: FunctionDeclaration = {
   }
 };
 
-export async function chatWithFinai(message: string, history: any[], context?: string) {
+export async function chatWithRaixi(message: string, history: any[], context?: string) {
   const dynamicPrompt = context 
     ? `${FINANCE_AGENT_PROMPT}\n\nCONTEXTO ATUAL E MEMÓRIAS DO USUÁRIO:\n${context}`
     : FINANCE_AGENT_PROMPT;

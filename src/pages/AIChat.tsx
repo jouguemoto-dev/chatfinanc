@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Send, Bot, User as UserIcon, Sparkles, Loader2, PlusCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
-import { chatWithFinai } from '../services/gemini';
+import { chatWithRaixi } from '../services/gemini';
 import { ChatMessage } from '../types';
 import ReactMarkdown from 'react-markdown';
 
@@ -90,7 +90,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
       }));
 
       const context = getFinancialContext();
-      const response = await chatWithFinai(currentInput, history, context);
+      const response = await chatWithRaixi(currentInput, history, context);
       
       const assistantMessage: ChatMessage = { 
         role: 'assistant', 
@@ -178,7 +178,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
             className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
           >
             <p className="text-[10px] text-slate-500 uppercase tracking-tighter">
-              {msg.role === 'assistant' ? 'Finai' : 'Você'} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {msg.role === 'assistant' ? 'RAIXI' : 'Você'} • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
             <div className={`p-3 rounded-2xl text-sm ${
               msg.role === 'user' 

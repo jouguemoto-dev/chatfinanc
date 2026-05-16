@@ -55,7 +55,7 @@ export const Login: React.FC = () => {
         </div>
         
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 tracking-tighter text-white italic">Finai</h1>
+          <h1 className="text-4xl font-black mb-2 tracking-tighter text-white italic pr-5 uppercase">RAIXI</h1>
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] leading-none">Inteligência Financeira Ativa</p>
         </div>
 
