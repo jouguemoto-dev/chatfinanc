@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   History,
-  Sparkles
+  Sparkles,
+  Download
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { 
@@ -30,6 +31,47 @@ import { BankSummary } from '../components/BankSummary';
 export const Dashboard: React.FC = () => {
   const { transactions = [], cards = [] } = useFinance();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  const exportToCSV = () => {
+    setIsExporting(true);
+    try {
+      if (transactions.length === 0) {
+        alert('Nenhuma transação para exportar.');
+        return;
+      }
+
+      const headers = ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status'];
+      const rows = transactions.map(t => [
+        t.date,
+        t.description,
+        t.category,
+        t.type === 'income' ? 'Entrada' : 'Saída',
+        t.amount.toString().replace('.', ','),
+        t.status === 'confirmed' ? 'Confirmado' : 'Pendente'
+      ]);
+
+      const csvContent = [
+        headers.join(';'),
+        ...rows.map(r => r.join(';'))
+      ].join('\n');
+
+      const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `transacoes_raixi_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const totalIncome = transactions
     .filter(t => t?.type === 'income')
@@ -107,8 +149,13 @@ export const Dashboard: React.FC = () => {
           <p className="text-xs font-bold text-white/30 uppercase tracking-[0.2em]">Gestão inteligente em tempo real</p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-none px-6 h-14 bg-[#121212] hover:bg-white/5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/5 transition-all text-white/40">
-            Exportar
+          <button 
+            onClick={exportToCSV}
+            disabled={isExporting}
+            className="flex-1 sm:flex-none px-6 h-14 bg-[#121212] hover:bg-white/5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-white/5 transition-all text-white/40 flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
+            {isExporting ? 'Exportando...' : 'Exportar'}
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Sparkles, Loader2 } from 'lucide-react';
+import { X, Sparkles, Loader2, RefreshCcw, Check } from 'lucide-react';
 import { useFinance } from '../../contexts/FinanceContext';
 import { Transaction, TransactionType, TransactionStatus } from '../../types';
 import { categorizeTransaction } from '../../services/aiService';
@@ -19,7 +19,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [subcategory, setSubcategory] = useState('');
   const [cardId, setCardId] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState(false);
+  const [repetitionMode, setRepetitionMode] = useState<'none' | 'installments' | 'advanced'>('none');
   const [installments, setInstallments] = useState('1');
+  const [startInstallment, setStartInstallment] = useState('1');
+  const [repeatFrequency, setRepeatFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [repeatInterval, setRepeatInterval] = useState('1');
+  const [isIndefinite, setIsIndefinite] = useState(false);
+  const [totalOccurrences, setTotalOccurrences] = useState('1');
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState<TransactionStatus>(TransactionStatus.CONFIRMED);
@@ -33,7 +39,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       setSubcategory(initialData.subcategory || '');
       setCardId(initialData.cardId || '');
       setIsRecurring(initialData.isRecurring || false);
+      
+      if (initialData.installments && initialData.installments > 1 && !initialData.repeatFrequency) {
+        setRepetitionMode('installments');
+      } else if (initialData.repeatFrequency) {
+        setRepetitionMode('advanced');
+      } else {
+        setRepetitionMode(initialData.isRecurring ? 'installments' : 'none');
+      }
+
       setInstallments(initialData.installments?.toString() || '1');
+      setStartInstallment(initialData.installmentNumber?.toString() || '1');
+      setRepeatFrequency(initialData.repeatFrequency || 'monthly');
+      setRepeatInterval(initialData.repeatInterval?.toString() || '1');
+      setIsIndefinite(initialData.isIndefinite || false);
+      setTotalOccurrences(initialData.totalOccurrences?.toString() || '1');
+      
       setType(initialData.type);
       setDate(initialData.date);
       setStatus(initialData.status || TransactionStatus.CONFIRMED);
@@ -44,7 +65,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       setSubcategory('');
       setCardId('');
       setIsRecurring(false);
+      setRepetitionMode('none');
       setInstallments('1');
+      setStartInstallment('1');
+      setRepeatFrequency('monthly');
+      setRepeatInterval('1');
+      setIsIndefinite(false);
+      setTotalOccurrences('1');
       setType(TransactionType.EXPENSE);
       setDate(new Date().toISOString().split('T')[0]);
       setStatus(TransactionStatus.CONFIRMED);
@@ -78,8 +105,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       type,
       date,
       status,
-      isRecurring,
-      installments: isRecurring ? parseInt(installments) : null,
+      isRecurring: repetitionMode !== 'none',
+      installments: repetitionMode === 'installments' ? parseInt(installments) : (repetitionMode === 'advanced' ? parseInt(totalOccurrences) : null),
+      installmentNumber: repetitionMode === 'installments' ? parseInt(startInstallment) : null,
+      repeatFrequency: repetitionMode === 'advanced' ? repeatFrequency : null,
+      repeatInterval: repetitionMode === 'advanced' ? parseInt(repeatInterval) : null,
+      isIndefinite: repetitionMode === 'advanced' ? isIndefinite : false,
+      totalOccurrences: repetitionMode === 'advanced' ? (isIndefinite ? null : parseInt(totalOccurrences)) : null,
     };
 
     if (initialData) {
@@ -109,68 +141,68 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="relative w-full max-w-[400px] max-h-[92vh] sm:max-h-none sm:h-auto bg-[#080808] border-t sm:border border-white/5 rounded-t-[40px] sm:rounded-[32px] p-8 shadow-2xl overflow-y-auto no-scrollbar"
           >
-            <div className="flex justify-between items-center mb-10">
+            <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-xl font-black italic tracking-tighter text-white uppercase leading-none">
+                <h2 className="text-lg font-black italic tracking-tighter text-white uppercase leading-none">
                   {initialData ? 'Editar' : 'Lançar'}
                 </h2>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                  <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">Rede RAIXI Ativa</p>
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <div className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />
+                  <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">RAIXI Core Sync</p>
                 </div>
               </div>
               <button 
                 onClick={onClose} 
-                className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40 hover:text-white transition-all active:scale-90"
+                className="w-9 h-9 flex items-center justify-center bg-white/5 rounded-full text-white/30 hover:text-white transition-all active:scale-90"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Type Switcher */}
-              <div className="flex bg-[#121212] p-1 rounded-2xl gap-1 border border-white/5">
-                {[
-                  { id: TransactionType.EXPENSE, label: 'Saída', color: 'rose' },
-                  { id: TransactionType.INCOME, label: 'Entrada', color: 'emerald' }
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setType(t.id as TransactionType)}
-                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
-                      type === t.id 
-                        ? t.color === 'rose' 
-                          ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' 
-                          : 'bg-[#00D084] text-white shadow-lg shadow-emerald-500/20'
-                        : 'text-white/20 hover:text-white/40'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Main Entry Section */}
+              <div className="bg-[#121212]/50 border border-white/5 rounded-[28px] p-5">
+                <div className="flex bg-black/40 p-1 rounded-xl mb-5 border border-white/5">
+                  {[
+                    { id: TransactionType.EXPENSE, label: 'Saída', color: 'rose' },
+                    { id: TransactionType.INCOME, label: 'Entrada', color: 'emerald' }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setType(t.id as TransactionType)}
+                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
+                        type === t.id 
+                          ? t.color === 'rose' 
+                            ? 'bg-rose-600 text-white shadow-lg' 
+                            : 'bg-[#00D084] text-white shadow-lg'
+                          : 'text-white/20 hover:text-white/40'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
 
-              {/* Valor Principal */}
-              <div className="text-center py-4">
-                <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] block mb-3">Montante</span>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-xl font-black text-white/20">R$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="bg-transparent outline-none font-mono text-5xl font-black text-white placeholder:text-white/5 w-full max-w-[200px] text-center"
-                    placeholder="0,00"
-                    autoFocus
-                  />
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-sm font-black text-white/20">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="bg-transparent outline-none font-mono text-4xl font-black text-white placeholder:text-white/5 w-full max-w-[170px] text-center"
+                      placeholder="0,00"
+                      autoFocus
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Inputs Agrupados */}
-              <div className="space-y-3">
+              {/* Data Fields */}
+              <div className="space-y-2">
                 <div className="relative">
                   <input
                     type="text"
@@ -178,24 +210,24 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     onBlur={handleAutoCategorize}
-                    className="w-full bg-[#121212] border border-white/5 rounded-2xl py-5 px-6 outline-none focus:border-white/20 transition-all text-white/80 text-sm font-bold placeholder:text-white/10 uppercase tracking-tight"
-                    placeholder="Descrição do Gasto"
+                    className="w-full bg-[#121212] border border-white/5 rounded-xl py-3.5 px-5 outline-none focus:border-white/20 transition-all text-white/80 text-[11px] font-bold uppercase tracking-tight placeholder:text-white/10"
+                    placeholder="Descrição"
                   />
-                  <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
                     {isCategorizing ? (
-                      <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
                     ) : (
-                      <Sparkles className="w-5 h-5 text-indigo-500/30" />
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-500/20" />
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-[#121212] border border-white/5 rounded-2xl py-4 px-6 outline-none focus:border-white/20 transition-all appearance-none text-white/40 text-[10px] font-black uppercase tracking-[0.2em]"
+                      className="w-full bg-[#121212] border border-white/5 rounded-xl py-3 px-4 outline-none focus:border-white/20 appearance-none text-white/40 text-[9px] font-black uppercase tracking-[0.1em]"
                     >
                       <option value="Alimentação">Alimentação</option>
                       <option value="Transporte">Transporte</option>
@@ -211,86 +243,130 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full bg-[#121212] border border-white/5 rounded-2xl py-4 px-6 outline-none focus:border-white/20 transition-all text-white/40 text-[10px] font-black font-mono uppercase"
+                    className="w-full bg-[#121212] border border-white/5 rounded-xl py-3 px-5 outline-none focus:border-white/20 text-white/40 text-[9px] font-black uppercase font-mono"
                   />
                 </div>
 
                 <select
                   value={cardId}
                   onChange={(e) => setCardId(e.target.value)}
-                  className="w-full bg-[#121212] border border-white/5 rounded-2xl py-4 px-6 outline-none focus:border-white/20 transition-all appearance-none text-white/40 text-[10px] font-black uppercase tracking-[0.2em]"
+                  className="w-full bg-[#121212] border border-white/5 rounded-xl py-3 px-5 outline-none focus:border-white/20 appearance-none text-white/40 text-[9px] font-black uppercase tracking-[0.1em]"
                 >
-                  <option value="">Sem Cartão Associado</option>
+                  <option value="">Sem Cartão</option>
                   {cards.map(card => (
-                    <option key={card.id} value={card.id}>{card.bank} • {card.name}</option>
+                    <option key={card.id} value={card.id}>{card.bank}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Advanced Config */}
-              <div className="bg-[#121212]/30 border border-white/5 rounded-3xl p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <button 
-                    type="button"
-                    onClick={() => setIsRecurring(!isRecurring)}
-                    className={`flex items-center gap-3 transition-all ${isRecurring ? 'text-white' : 'text-white/20 hover:text-white/40'}`}
-                  >
-                    <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${isRecurring ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-500/20' : 'border-white/10'}`}>
-                      {isRecurring && <div className="w-2 h-2 bg-white rounded-full" />}
+              {/* Automation Section */}
+              <div className="bg-[#121212]/30 border border-white/5 rounded-2xl p-4 space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20">Repetição</span>
+                    <div className="flex bg-black/40 p-1 rounded-lg gap-1 border border-white/5">
+                      {[
+                        { id: 'none', label: 'Não' },
+                        { id: 'installments', label: 'Parc' },
+                        { id: 'advanced', label: 'Avanç' }
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setRepetitionMode(m.id as any)}
+                          className={`px-3 py-1 rounded-md text-[7px] font-black uppercase tracking-widest transition-all ${
+                            repetitionMode === m.id 
+                              ? 'bg-indigo-600 text-white shadow-lg' 
+                              : 'text-white/10 hover:text-white/20'
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Recorrência</span>
-                  </button>
+                  </div>
 
-                  <div className="flex bg-black/40 p-1.5 rounded-xl gap-1">
-                    {[TransactionStatus.PENDING, TransactionStatus.CONFIRMED].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setStatus(s)}
-                        className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase tracking-[0.2em] transition-all ${
-                          status === s 
-                            ? 'bg-white text-black shadow-lg' 
-                            : 'text-white/20 hover:text-white/40'
-                        }`}
-                      >
-                        {s === TransactionStatus.PENDING ? 'Pend' : 'Conf'}
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20">Status</span>
+                    <div className="flex bg-black/40 p-1 rounded-lg gap-1 border border-white/5">
+                      {[TransactionStatus.PENDING, TransactionStatus.CONFIRMED].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setStatus(s)}
+                          className={`px-3 py-1 rounded-md text-[7px] font-black uppercase tracking-widest transition-all ${
+                            status === s 
+                              ? 'bg-white text-black' 
+                              : 'text-white/10 hover:text-white/20'
+                          }`}
+                        >
+                          {s === TransactionStatus.PENDING ? 'Pend' : 'Conf'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <AnimatePresence>
-                  {isRecurring && (
+                <AnimatePresence mode="wait">
+                  {repetitionMode === 'installments' && (
                     <motion.div
+                      key="installments"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="pt-6 border-t border-white/5 space-y-4"
+                      className="pt-3 border-t border-white/5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Nº de Parcelas</span>
-                        <div className="flex items-center gap-1 bg-black/60 rounded-xl p-1">
-                          <button 
-                            type="button" 
-                            onClick={() => setInstallments(Math.max(1, parseInt(installments) - 1).toString())}
-                            className="w-10 h-10 flex items-center justify-center text-white/20 hover:text-white transition-colors"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            value={installments}
-                            onChange={(e) => setInstallments(e.target.value)}
-                            className="bg-transparent outline-none w-10 text-center text-sm font-black text-white"
-                          />
-                          <button 
-                            type="button" 
-                            onClick={() => setInstallments((parseInt(installments) + 1).toString())}
-                            className="w-10 h-10 flex items-center justify-center text-white/20 hover:text-white transition-colors"
-                          >
-                            +
-                          </button>
+                        <span className="text-[8px] font-black uppercase tracking-[0.1em] text-white/10">Parcelas:</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-col items-center">
+                            <span className="text-[6px] text-white/20 uppercase mb-1">Início</span>
+                            <input type="number" value={startInstallment} onChange={(e) => setStartInstallment(e.target.value)} className="bg-black/60 outline-none w-10 py-1.5 rounded-lg text-center text-[10px] font-black text-white border border-white/5" />
+                          </div>
+                          <span className="text-[8px] font-black text-white/5 pt-4">/</span>
+                          <div className="flex flex-col items-center">
+                            <span className="text-[6px] text-white/20 uppercase mb-1">Total</span>
+                            <input type="number" value={installments} onChange={(e) => setInstallments(e.target.value)} className="bg-black/60 outline-none w-10 py-1.5 rounded-lg text-center text-[10px] font-black text-white border border-white/5" />
+                          </div>
                         </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {repetitionMode === 'advanced' && (
+                    <motion.div
+                      key="advanced"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="pt-3 border-t border-white/5 space-y-3"
+                    >
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center justify-between bg-black/60 rounded-xl px-2.5 py-1.5 border border-white/5">
+                          <span className="text-[7px] font-black uppercase text-white/20">Intervalo</span>
+                          <input type="number" value={repeatInterval} onChange={(e) => setRepeatInterval(e.target.value)} className="bg-transparent outline-none w-6 text-center text-[9px] font-black text-white" />
+                        </div>
+                        <select value={repeatFrequency} onChange={(e) => setRepeatFrequency(e.target.value as any)} className="w-full bg-black/60 border border-white/5 rounded-xl px-2 py-1.5 outline-none text-white/40 text-[7px] font-black uppercase text-center appearance-none cursor-pointer">
+                          <option value="daily">Dias</option>
+                          <option value="weekly">Semanas</option>
+                          <option value="monthly">Meses</option>
+                          <option value="yearly">Anos</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between px-1">
+                        <button type="button" onClick={() => setIsIndefinite(!isIndefinite)} className="flex items-center gap-2 group">
+                          <div className={`w-3.5 h-3.5 rounded border transition-all flex items-center justify-center ${isIndefinite ? 'bg-indigo-600 border-indigo-600' : 'border-white/10'}`}>
+                            {isIndefinite && <Check className="w-2.5 h-2.5 text-white" />}
+                          </div>
+                          <span className="text-[7px] font-black uppercase tracking-[0.1em] text-white/20">Indefinido</span>
+                        </button>
+                        {!isIndefinite && (
+                          <div className="flex items-center gap-3 bg-black/60 rounded-xl px-3 py-1.5 border border-white/5">
+                            <span className="text-[7px] font-black uppercase text-white/10">Ocorrências:</span>
+                            <input type="number" value={totalOccurrences} onChange={(e) => setTotalOccurrences(e.target.value)} className="bg-transparent outline-none w-6 text-center text-[9px] font-black text-white" />
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -299,9 +375,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
               <button
                 type="submit"
-                className="w-full py-6 bg-white hover:bg-[#F5F5F5] text-black rounded-[32px] font-black uppercase tracking-[0.3em] transition-all shadow-2xl active:scale-[0.98] text-[12px]"
+                className="w-full py-4 bg-white hover:bg-[#F5F5F5] text-black rounded-2xl font-black uppercase tracking-[0.3em] transition-all shadow-xl active:scale-[0.98] text-[10px] mt-2 mb-2"
               >
-                {initialData ? 'Atualizar Dados' : 'Efetivar Lançamento'}
+                {initialData ? 'Atualizar' : 'Efetivar Lançamento'}
               </button>
             </form>
           </motion.div>

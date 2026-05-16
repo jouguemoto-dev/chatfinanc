@@ -24,7 +24,7 @@
 }
 
 .card-gradient {
-  @apply bg-gradient-to-br from-indigo-600 to-purple-800 shadow-xl shadow-indigo-900/20;
+  @apply bg-gradient-to-br from-indigo-900 via-indigo-600 to-violet-900 shadow-xl shadow-indigo-500/10;
 }
 
 .text-gradient {

@@ -148,21 +148,32 @@ export const Cards: React.FC = () => {
               key={card.id}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ 
+                y: -12,
+                rotateX: 4,
+                rotateY: -4,
+                scale: 1.02,
+                transition: { type: 'spring', stiffness: 300, damping: 20 }
+              }}
               transition={{ delay: i * 0.1 }}
               onClick={() => handleViewDetail(card)}
-              className={`card-gradient min-h-[300px] rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:shadow-2xl hover:shadow-brand-primary/10 transition-all border border-white/5`}
+              className="card-gradient min-h-[300px] rounded-[32px] p-8 flex flex-col justify-between relative overflow-hidden group cursor-pointer border border-white/10 shadow-2xl transition-shadow duration-500 hover:shadow-brand-primary/20 hover:shadow-[0_40px_80px_-20px_rgba(99,102,241,0.3)]"
             >
-              <div className="absolute top-0 right-0 p-6 opacity-20 rotate-12 group-hover:rotate-0 transition-transform duration-500">
-                <CardIcon className="w-24 h-24" />
+              {/* Inner Glow and Patterns */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+              <div className="absolute -inset-[50%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0%,transparent_70%)] blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 animate-pulse pointer-events-none" />
+              
+              <div className="absolute top-0 right-0 p-6 opacity-10 rotate-12 group-hover:rotate-0 group-hover:scale-110 transition-all duration-700">
+                <CardIcon className="w-32 h-32" />
               </div>
 
               <div className="flex justify-between items-start relative z-10">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 mb-1">{card.bank}</p>
-                  <p className="text-xl font-mono tracking-widest text-white uppercase italic">{card.name}</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.3em] text-white/50 mb-2">{card.bank}</p>
+                  <p className="text-2xl font-mono tracking-widest text-white uppercase italic drop-shadow-lg">{card.name}</p>
                 </div>
-                <div className="flex gap-4 items-start">
-                  <div className="h-10 w-24 bg-black/20 backdrop-blur-sm rounded-xl p-1.5 transition-all flex flex-col justify-end">
+                <div className="flex gap-5 items-start">
+                  <div className="h-12 w-28 bg-black/40 backdrop-blur-md rounded-2xl p-2 transition-all border border-white/5 flex flex-col justify-end group-hover:border-white/20">
                     <div className="flex-1">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={evolution}>
@@ -227,12 +238,12 @@ export const Cards: React.FC = () => {
                     </div>
                     <p className="text-[10px] font-black text-white">R$ {card.limit.toLocaleString('pt-BR')}</p>
                   </div>
-                  <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden shadow-inner border border-white/5">
+                  <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden shadow-inner border border-white/5 relative">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${usage}%` }}
-                      className={`h-full shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-colors duration-500 ${
-                        usage > 90 ? 'bg-rose-400' : usage > 70 ? 'bg-amber-400' : 'bg-white'
+                      className={`h-full relative z-10 transition-colors duration-500 rounded-full ${
+                        usage > 90 ? 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)]' : usage > 70 ? 'bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]' : 'bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]'
                       }`}
                     />
                   </div>

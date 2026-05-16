@@ -23,8 +23,12 @@ export interface Transaction {
   status: TransactionStatus;
   cardId?: string;
   isRecurring: boolean;
+  repeatFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  repeatInterval?: number;
+  isIndefinite?: boolean;
   installments?: number;
   installmentNumber?: number;
+  totalOccurrences?: number;
   isDeleted?: boolean;
   deletedAt?: any;
   createdAt: any;
