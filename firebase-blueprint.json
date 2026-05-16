@@ -65,6 +65,19 @@
       },
       "required": ["userId", "name", "targetAmount", "currentAmount"]
     },
+    "Memory": {
+      "title": "Memory",
+      "description": "Learned facts about the user's financial behavior and preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fact": { "type": "string", "description": "The description of the learned fact (e.g., 'User spends more on Fridays')" },
+        "category": { "type": "string", "enum": ["preference", "behavior", "insight", "goal_detail"] },
+        "relevance": { "type": "number", "description": "Score from 1-10" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "fact", "category"]
+    },
     "ChatSession": {
       "title": "ChatSession",
       "description": "AI assistant chat session",
@@ -104,6 +117,10 @@
     "/goals/{goalId}": {
       "schema": "Goal",
       "description": "Financial goals"
+    },
+    "/memory/{memoryId}": {
+      "schema": "Memory",
+      "description": "AI-learned user preferences and behaviors"
     },
     "/chats/{chatId}": {
       "schema": "ChatSession",

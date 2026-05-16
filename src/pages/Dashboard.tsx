@@ -25,22 +25,23 @@ import {
   Cell
 } from 'recharts';
 import { TransactionModal } from '../components/modals/TransactionModal';
+import { BankSummary } from '../components/BankSummary';
 
 export const Dashboard: React.FC = () => {
-  const { transactions, cards } = useFinance();
+  const { transactions = [], cards = [] } = useFinance();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((acc, t) => acc + t.amount, 0);
+    .filter(t => t?.type === 'income')
+    .reduce((acc, t) => acc + (t?.amount || 0), 0);
 
   const totalExpense = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((acc, t) => acc + t.amount, 0);
+    .filter(t => t?.type === 'expense')
+    .reduce((acc, t) => acc + (t?.amount || 0), 0);
 
   const balance = totalIncome - totalExpense;
 
-  const totalCardLimit = cards.reduce((acc, c) => acc + c.limit, 0);
+  const totalCardLimit = cards.reduce((acc, c) => acc + (c?.limit || 0), 0);
 
   // Chart data calculation
   const last6Months = Array.from({ length: 6 }, (_, i) => {
@@ -55,22 +56,23 @@ export const Dashboard: React.FC = () => {
 
   const chartData = last6Months.map(m => {
     const monthTransactions = transactions.filter(t => {
+      if (!t?.date) return false;
       const tDate = new Date(t.date);
       return tDate.getMonth() === m.monthIndex && tDate.getFullYear() === m.year;
     });
 
     return {
       name: m.month,
-      income: monthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
-      expense: monthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
+      income: monthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + (t.amount || 0), 0),
+      expense: monthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + (t.amount || 0), 0),
     };
   });
 
   const categoriesMap: Record<string, number> = {};
   transactions
-    .filter(t => t.type === 'expense')
+    .filter(t => t?.type === 'expense' && t?.category)
     .forEach(t => {
-      categoriesMap[t.category] = (categoriesMap[t.category] || 0) + t.amount;
+      categoriesMap[t.category] = (categoriesMap[t.category] || 0) + (t.amount || 0);
     });
 
   const pieData = Object.entries(categoriesMap)
@@ -96,22 +98,24 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex justify-between items-end">
+    <div className="flex flex-col gap-6 lg:gap-8">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white italic">Dashboard Central</h1>
-          <p className="text-slate-500">Sua saúde financeira analisada em tempo real.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white italic">Bem-vindo, {transactions.length > 0 ? 'Gestor' : 'Iniciante'}</h1>
+          <p className="text-sm text-slate-500">Sua saúde financeira em tempo real.</p>
         </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm border border-white/10 transition-colors">Exportar PDF</button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button className="flex-1 sm:flex-none px-4 h-12 sm:h-10 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase tracking-widest border border-white/10 transition-colors">Exportar</button>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 rounded-lg text-sm font-semibold transition-colors"
+            className="flex-1 sm:flex-none px-6 h-12 sm:h-10 bg-brand-primary hover:bg-brand-primary/90 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-lg shadow-indigo-500/20"
           >
-            + Nova Transação
+            + Transação
           </button>
         </div>
       </header>
+
+      <BankSummary />
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -144,10 +148,10 @@ export const Dashboard: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          className="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col h-[400px]"
+          className="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col h-[300px] sm:h-[400px]"
         >
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold">Fluxo de Caixa Mensal</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+            <h3 className="text-base sm:text-lg font-semibold">Fluxo Mensal</h3>
             <div className="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
               <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-brand-primary"></span> Receitas</div>
               <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-brand-secondary"></span> Despesas</div>
@@ -183,10 +187,10 @@ export const Dashboard: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col h-[400px]"
+          className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col min-h-[300px] lg:h-[400px]"
         >
-          <h3 className="text-lg font-semibold mb-6">Distribuição AI</h3>
-          <div className="flex-1 max-h-52">
+          <h3 className="text-base sm:text-lg font-semibold mb-6">Categorias</h3>
+          <div className="flex-1 max-h-48 sm:max-h-52">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -223,10 +227,10 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Recent Transactions List */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden p-6">
+      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden p-4 sm:p-6 mb-8 lg:mb-0">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Log Operacional</h3>
-          <button className="text-brand-primary text-xs font-bold uppercase tracking-widest hover:underline">Auditoria Completa</button>
+          <h3 className="text-base sm:text-lg font-semibold">Lançamentos</h3>
+          <button className="text-brand-primary text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:underline">Ver Todos</button>
         </div>
         <div className="space-y-2">
           {transactions.slice(0, 5).map((t) => (

@@ -8,7 +8,7 @@ service cloud.firestore {
 
     // Phase 3: Primitive Definition
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null && request.auth.token.email_verified == true;
     }
 
     function isOwner(userId) {
@@ -76,11 +76,12 @@ service cloud.firestore {
         && data.limit is number
         && data.brand is string
         && data.dueDay is number
-        && (data.get('bestDay', null) == null || data.bestDay is number)
+        && data.bestDay is number
         && data.color is string
         && data.isDeleted is bool
         && data.createdAt == request.time
-        && data.keys().hasAll(['userId', 'name', 'bank', 'limit', 'brand', 'dueDay', 'color', 'isDeleted', 'createdAt']);
+        && data.keys().hasAll(['userId', 'name', 'bank', 'limit', 'brand', 'dueDay', 'bestDay', 'color', 'isDeleted', 'createdAt'])
+        && data.keys().size() == 10;
     }
 
     function isUpdateValidCard(data, prev) {
@@ -107,7 +108,8 @@ service cloud.firestore {
         && data.dueDate is string
         && data.isDeleted is bool
         && data.createdAt == request.time
-        && data.keys().hasAll(['userId', 'name', 'targetAmount', 'currentAmount', 'category', 'dueDate', 'isDeleted', 'createdAt']);
+        && data.keys().hasAll(['userId', 'name', 'targetAmount', 'currentAmount', 'category', 'dueDate', 'isDeleted', 'createdAt'])
+        && data.keys().size() == 9;
     }
 
     function isUpdateValidGoal(data, prev) {
@@ -119,6 +121,16 @@ service cloud.firestore {
         && data.isDeleted is bool
         && (data.get('updatedAt', null) == null || data.updatedAt == request.time || data.updatedAt == prev.get('updatedAt', null))
         && (data.get('deletedAt', null) == null || data.deletedAt == request.time || data.deletedAt == prev.get('deletedAt', null));
+    }
+
+    function isValidMemory(data) {
+      return data.userId == request.auth.uid
+        && data.fact is string && data.fact.size() <= 1000
+        && data.category in ['preference', 'behavior', 'insight', 'goal_detail']
+        && (data.get('relevance', null) == null || data.relevance is number)
+        && (data.get('updatedAt', null) == null || data.updatedAt == request.time)
+        && data.keys().hasAll(['userId', 'fact', 'category'])
+        && data.keys().size() <= 10;
     }
 
     // --- Match Rules ---
@@ -154,6 +166,13 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidGoal(incoming());
       allow update: if isSignedIn() && isDocOwner() 
         && (isUpdateValidGoal(incoming(), existing()) || incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted', 'deletedAt']));
+      allow delete: if isSignedIn() && isDocOwner();
+    }
+
+    match /memory/{memoryId} {
+      allow get: if isSignedIn() && isOwner(existing().get('userId', ''));
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn() && isValidMemory(incoming());
       allow delete: if isSignedIn() && isDocOwner();
     }
 

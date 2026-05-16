@@ -101,154 +101,149 @@ export const Transactions: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex justify-between items-end">
+    <div className="flex flex-col gap-6 lg:gap-8">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white italic">Transações</h1>
-          <p className="text-slate-500">Histórico detalhado de toda atividade operacional.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white italic">Extrato</h1>
+          <p className="text-sm text-slate-500">Histórico detalhado da sua vida financeira.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 w-full sm:w-auto">
           <button 
             onClick={exportToCSV}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm border border-white/10 transition-colors"
+            className="flex-1 sm:flex-none px-4 h-12 sm:h-10 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase tracking-widest border border-white/10 transition-colors"
           >
-            Exportar CSV
+            Exportar
           </button>
           <button 
             onClick={handleAddNew}
-            className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 rounded-lg text-sm font-semibold transition-colors"
+            className="flex-1 sm:flex-none px-6 h-12 sm:h-10 bg-brand-primary hover:bg-brand-primary/90 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-lg shadow-indigo-500/20"
           >
-            + Nova Entrada
+            + Lançamento
           </button>
         </div>
       </header>
 
       {/* Filters Bar */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col xl:flex-row gap-4 items-center p-4 bg-white/5 border border-white/10 rounded-2xl">
+        <div className="flex flex-col gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
           <div className="relative flex-1 group w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-brand-primary transition-colors" />
             <input 
               type="text"
-              placeholder="Buscar por descrição ou categoria..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/5 border border-white/5 rounded-xl py-2.5 pl-12 pr-4 outline-none focus:border-brand-primary/30 transition-all text-sm"
+              className="w-full h-12 sm:h-10 bg-white/5 border border-white/5 rounded-xl py-2 pl-12 pr-4 outline-none focus:border-brand-primary/30 transition-all text-sm"
             />
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto">
-            {/* Date Picker Range */}
-            <div className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/5 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-slate-500" />
-                <input 
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-transparent text-xs text-white outline-none focus:text-brand-primary transition-all [color-scheme:dark]"
-                />
-              </div>
-              <span className="text-slate-600 text-[10px] font-bold uppercase">Até</span>
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <div className="flex flex-1 items-center gap-2 px-4 h-12 sm:h-10 bg-white/5 border border-white/5 rounded-xl">
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <input 
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="flex-1 bg-transparent text-xs text-white outline-none [color-scheme:dark]"
+              />
+              <span className="text-slate-600 text-[10px] font-bold">A</span>
               <input 
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent text-xs text-white outline-none focus:text-brand-primary transition-all [color-scheme:dark]"
+                className="flex-1 bg-transparent text-xs text-white outline-none [color-scheme:dark]"
               />
-              {(startDate || endDate) && (
-                <button 
-                  onClick={() => { setStartDate(''); setEndDate(''); }}
-                  className="p-1 hover:text-rose-400 text-slate-500 transition-colors"
-                  title="Limpar Datas"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+            </div>
+            
+            <div className="flex items-center gap-2 bg-white/5 px-4 h-12 sm:h-10 rounded-xl border border-white/5">
+              <CreditCard className="w-4 h-4 text-slate-500" />
+              <select
+                value={filterCardId}
+                onChange={(e) => setFilterCardId(e.target.value)}
+                className="w-full bg-transparent text-[10px] font-bold uppercase tracking-widest text-white outline-none appearance-none cursor-pointer"
+              >
+                <option value="all" className="bg-slate-900">Todos Cartões</option>
+                {cards.map(card => (
+                  <option key={card.id} value={card.id} className="bg-slate-900">{card.bank}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 items-center p-4 bg-white/5 border border-white/10 rounded-2xl">
-          <div className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl border border-white/5 min-w-[200px]">
-            <CreditCard className="w-4 h-4 text-slate-500" />
-            <select
-              value={filterCardId}
-              onChange={(e) => setFilterCardId(e.target.value)}
-              className="w-full bg-transparent text-[10px] font-bold uppercase tracking-widest text-white outline-none focus:text-brand-primary transition-all appearance-none cursor-pointer"
+        <div className="flex overflow-x-auto pb-2 gap-2 scrollbar-none">
+          {['all', 'income', 'expense'].map((type) => (
+            <button
+              key={type}
+              onClick={() => setFilterType(type as any)}
+              className={`px-4 py-2 h-10 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0
+                ${filterType === type 
+                  ? 'bg-brand-primary text-white' 
+                  : 'bg-white/5 text-slate-500 border border-white/5 hover:text-white'
+                }
+              `}
             >
-              <option value="all" className="bg-slate-900 text-white">Todos os Cartões</option>
-              {cards.map(card => (
-                <option key={card.id} value={card.id} className="bg-slate-900 text-white">{card.bank} - {card.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="w-3 h-3 text-slate-500 ml-auto pointer-events-none" />
-          </div>
-
-          <div className="flex gap-2">
-            {[
-              { id: 'all', label: 'Todos Status' },
-              { id: TransactionStatus.PENDING, label: 'Pendentes' },
-              { id: TransactionStatus.CONFIRMED, label: 'Confirmadas' },
-              { id: TransactionStatus.CANCELED, label: 'Canceladas' },
-            ].map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setFilterStatus(s.id as any)}
-                className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all
-                  ${filterStatus === s.id 
-                    ? 'bg-brand-primary text-white' 
-                    : 'bg-white/5 text-slate-500 hover:text-white'
-                  }
-                `}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            {[
-              { id: 'all', label: 'Toda Freq.' },
-              { id: 'recurring', label: 'Recorrentes' },
-              { id: 'one-time', label: 'Únicas' },
-            ].map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setFilterRecurring(r.id as any)}
-                className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all
-                  ${filterRecurring === r.id 
-                    ? 'bg-brand-primary text-white' 
-                    : 'bg-white/5 text-slate-500 hover:text-white'
-                  }
-                `}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2 ml-auto">
-            {['all', 'income', 'expense'].map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilterType(type as any)}
-                className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all
-                  ${filterType === type 
-                    ? 'bg-brand-primary text-white' 
-                    : 'bg-white/5 text-slate-500 hover:text-white'
-                  }
-                `}
-              >
-                {type === 'all' ? 'Ver Todos' : type === 'income' ? 'Entradas' : 'Saídas'}
-              </button>
-            ))}
-          </div>
+              {type === 'all' ? 'Tudo' : type === 'income' ? 'Ganhos' : 'Gastos'}
+            </button>
+          ))}
+          <div className="w-px h-6 bg-white/10 mx-1 shrink-0 self-center" />
+          {[
+            { id: 'all', label: 'Toda Situação' },
+            { id: TransactionStatus.PENDING, label: 'Pendentes' },
+            { id: TransactionStatus.CONFIRMED, label: 'Confirmadas' },
+          ].map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setFilterStatus(s.id as any)}
+              className={`px-4 py-2 h-10 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0
+                ${filterStatus === s.id 
+                  ? 'bg-indigo-400 text-white' 
+                  : 'bg-white/5 text-slate-500 border border-white/5'
+                }
+              `}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Transactions List */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      {/* Mobile-Friendly List */}
+      <div className="lg:hidden flex flex-col gap-3">
+        {filteredTransactions.map((t) => (
+          <motion.div 
+            layout
+            key={t.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white/5 border border-white/5 rounded-2xl p-4 active:bg-white/10 transition-colors"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                  {t.type === 'income' ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm">{t.description}</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`font-black text-sm ${t.type === 'income' ? 'text-emerald-500' : 'text-white'}`}>
+                  {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <div className="flex gap-2 justify-end mt-2">
+                  <button onClick={() => handleEdit(t)} className="p-2 text-slate-500"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={() => handleMoveToTrash(t.id)} className="p-2 text-rose-500/50"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden lg:block bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>

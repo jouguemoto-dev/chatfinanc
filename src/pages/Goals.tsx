@@ -84,15 +84,15 @@ export const Goals: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex justify-between items-end">
+    <div className="flex flex-col gap-6 lg:gap-8">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white italic">Objetivos Financeiros</h1>
-          <p className="text-slate-500">Metas de curto, médio e longo prazo validadas.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white italic">Objetivos</h1>
+          <p className="text-sm text-slate-500">Transformando economia em conquistas reais.</p>
         </div>
         <button 
           onClick={handleAddNew}
-          className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+          className="w-full sm:w-auto h-12 sm:h-10 px-6 bg-brand-primary hover:bg-brand-primary/90 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
         >
           <Plus className="w-4 h-4" />
           Nova Meta

@@ -78,3 +78,12 @@ export interface ChatSession {
   lastMessage: string;
   updatedAt: any;
 }
+
+export interface Memory {
+  id: string;
+  userId: string;
+  fact: string;
+  category: 'preference' | 'behavior' | 'insight' | 'goal_detail';
+  relevance: number;
+  updatedAt: any;
+}

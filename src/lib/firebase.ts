@@ -43,15 +43,20 @@ try {
     app = initializeApp(config);
   } catch (reInitError) {
     console.error("Firebase critical failure:", reInitError);
-    // Last resort dummy app to avoid top-level crash if possible
+    // If all else fails, try to use the first app if it exists
     app = getApps()[0];
   }
 }
 
+// Fallback to avoid crashes if app is still undefined
+if (!app) {
+  console.warn("CRITICAL: Firebase app is undefined. App will likely crash.");
+}
+
 // Initialize Firestore and Auth
 // For databaseId, it MUST be undefined if it's the default database or falsy
-export const db = getFirestore(app, (databaseId && databaseId !== '(default)') ? databaseId : undefined);
-export const auth = getAuth(app);
+export const db = app ? getFirestore(app, (databaseId && databaseId !== '(default)') ? databaseId : undefined) : {} as any;
+export const auth = app ? getAuth(app) : { onAuthStateChanged: () => () => {} } as any;
 export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);

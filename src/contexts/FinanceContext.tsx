@@ -15,12 +15,13 @@ import {
 } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError } from '../lib/firebase';
 import { useAuth } from './AuthContext';
-import { Transaction, Card, Goal } from '../types';
+import { Transaction, Card, Goal, Memory } from '../types';
 
 interface FinanceContextType {
   transactions: Transaction[];
   cards: Card[];
   goals: Goal[];
+  memories: Memory[];
   trashTransactions: Transaction[];
   trashCards: Card[];
   trashGoals: Goal[];
@@ -30,6 +31,7 @@ interface FinanceContextType {
   updateCard: (id: string, data: Partial<Card>) => Promise<void>;
   addGoal: (data: Partial<Goal>) => Promise<void>;
   updateGoal: (id: string, data: Partial<Goal>) => Promise<void>;
+  upsertMemory: (data: Partial<Memory>) => Promise<void>;
   moveToTrash: (type: 'transactions' | 'cards' | 'goals', id: string) => Promise<void>;
   restoreFromTrash: (type: 'transactions' | 'cards' | 'goals', id: string) => Promise<void>;
   permanentDelete: (type: 'transactions' | 'cards' | 'goals', id: string) => Promise<void>;
@@ -41,6 +43,7 @@ const FinanceContext = createContext<FinanceContextType>({
   transactions: [],
   cards: [],
   goals: [],
+  memories: [],
   trashTransactions: [],
   trashCards: [],
   trashGoals: [],
@@ -50,6 +53,7 @@ const FinanceContext = createContext<FinanceContextType>({
   updateCard: async () => {},
   addGoal: async () => {},
   updateGoal: async () => {},
+  upsertMemory: async () => {},
   moveToTrash: async () => {},
   restoreFromTrash: async () => {},
   permanentDelete: async () => {},
@@ -62,6 +66,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
   const [trashTransactions, setTrashTransactions] = useState<Transaction[]>([]);
   const [trashCards, setTrashCards] = useState<Card[]>([]);
   const [trashGoals, setTrashGoals] = useState<Goal[]>([]);
@@ -81,6 +86,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const tQuery = query(collection(db, 'transactions'), where('userId', '==', user.uid), where('isDeleted', '==', false), orderBy('createdAt', 'desc'));
     const cQuery = query(collection(db, 'cards'), where('userId', '==', user.uid), where('isDeleted', '==', false));
     const gQuery = query(collection(db, 'goals'), where('userId', '==', user.uid), where('isDeleted', '==', false));
+    const mQuery = query(collection(db, 'memory'), where('userId', '==', user.uid), orderBy('updatedAt', 'desc'));
 
     // Queries para lixeira
     const tTrashQuery = query(collection(db, 'transactions'), where('userId', '==', user.uid), where('isDeleted', '==', true), orderBy('deletedAt', 'desc'));
@@ -89,26 +95,51 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const unsubscribeT = onSnapshot(tQuery, (snapshot) => {
       setTransactions(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)));
+    }, (err) => {
+      console.error('[FinanceContext] Transactions Snapshot Error:', err);
+      handleFirestoreError(err, OperationType.GET, 'transactions');
     });
 
     const unsubscribeC = onSnapshot(cQuery, (snapshot) => {
       setCards(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Card)));
+    }, (err) => {
+      console.error('[FinanceContext] Cards Snapshot Error:', err);
+      handleFirestoreError(err, OperationType.GET, 'cards');
     });
 
     const unsubscribeG = onSnapshot(gQuery, (snapshot) => {
       setGoals(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Goal)));
+    }, (err) => {
+      console.error('[FinanceContext] Goals Snapshot Error:', err);
+      handleFirestoreError(err, OperationType.GET, 'goals');
+    });
+
+    const unsubscribeM = onSnapshot(mQuery, (snapshot) => {
+      setMemories(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Memory)));
+    }, (err) => {
+      console.error('[FinanceContext] Memory Snapshot Error:', err);
+      handleFirestoreError(err, OperationType.GET, 'memory');
     });
 
     const unsubscribeTT = onSnapshot(tTrashQuery, (snapshot) => {
       setTrashTransactions(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)));
+    }, (err) => {
+      console.error('[FinanceContext] Trash Transactions Snapshot Error:', err);
+      handleFirestoreError(err, OperationType.GET, 'transactions_trash');
     });
 
     const unsubscribeTC = onSnapshot(cTrashQuery, (snapshot) => {
       setTrashCards(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Card)));
+    }, (err) => {
+      console.error('[FinanceContext] Trash Cards Snapshot Error:', err);
+      handleFirestoreError(err, OperationType.GET, 'cards_trash');
     });
 
     const unsubscribeTG = onSnapshot(gTrashQuery, (snapshot) => {
       setTrashGoals(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Goal)));
+    }, (err) => {
+      console.error('[FinanceContext] Trash Goals Snapshot Error:', err);
+      handleFirestoreError(err, OperationType.GET, 'goals_trash');
     });
 
     return () => {
@@ -171,6 +202,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) { handleFirestoreError(err, OperationType.UPDATE, `goals/${id}`); }
   };
 
+  const upsertMemory = async (data: Partial<Memory>) => {
+    if (!user) return;
+    try {
+      // Find if memory for this exact fact already exists to update it instead of duplicate
+      const q = query(collection(db, 'memory'), where('userId', '==', user.uid), where('fact', '==', data.fact));
+      const snap = await getDocs(q);
+      
+      if (!snap.empty) {
+        await updateDoc(doc(db, 'memory', snap.docs[0].id), {
+          ...data,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await addDoc(collection(db, 'memory'), {
+          ...data,
+          userId: user.uid,
+          updatedAt: serverTimestamp()
+        });
+      }
+    } catch (err) { handleFirestoreError(err, OperationType.CREATE, 'memory'); }
+  };
+
   const moveToTrash = async (type: 'transactions' | 'cards' | 'goals', id: string) => {
     try {
       await updateDoc(doc(db, type, id), { isDeleted: true, deletedAt: serverTimestamp() });
@@ -225,11 +278,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   return (
     <FinanceContext.Provider value={{ 
-      transactions, cards, goals, 
+      transactions, cards, goals, memories,
       trashTransactions, trashCards, trashGoals,
       addTransaction, updateTransaction,
       addCard, updateCard,
       addGoal, updateGoal,
+      upsertMemory,
       moveToTrash, restoreFromTrash, permanentDelete,
       emptyTrash,
       clearAllData 

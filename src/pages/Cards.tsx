@@ -14,8 +14,15 @@ import {
   ArrowUpRight,
   Trash2,
   Edit2,
-  Eye
+  Eye,
+  TrendingUp
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  ResponsiveContainer, 
+  Cell 
+} from 'recharts';
 import { Card } from '../types';
 import { CardModal } from '../components/modals/CardModal';
 import { ConfirmModal } from '../components/modals/ConfirmModal';
@@ -30,18 +37,58 @@ export const Cards: React.FC = () => {
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
+  const getMonthlySpent = (card: Card) => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    return transactions
+      .filter(t => t.cardId === card.id && t.type === 'expense' && !t.isDeleted)
+      .filter(t => {
+        if (!t.date) return false;
+        const tDate = new Date(t.date);
+        return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+      })
+      .reduce((acc, t) => acc + t.amount, 0);
+  };
+
   const getAvailableLimit = (card: Card) => {
     const spent = transactions
-      .filter(t => t.cardId === card.id && t.type === 'expense')
+      .filter(t => t.cardId === card.id && t.type === 'expense' && !t.isDeleted)
       .reduce((acc, t) => acc + t.amount, 0);
-    return card.limit - spent;
+    return Math.max(0, card.limit - spent);
   };
 
   const getUsagePercentage = (card: Card) => {
     const spent = transactions
-      .filter(t => t.cardId === card.id && t.type === 'expense')
+      .filter(t => t.cardId === card.id && t.type === 'expense' && !t.isDeleted)
       .reduce((acc, t) => acc + t.amount, 0);
     return Math.min(Math.round((spent / card.limit) * 100), 100);
+  };
+
+  const getSpendingEvolution = (card: Card) => {
+    const now = new Date();
+    const months = [];
+    
+    for (let i = 2; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const month = d.getMonth();
+      const year = d.getFullYear();
+      
+      const total = transactions
+        .filter(t => t.cardId === card.id && t.type === 'expense' && !t.isDeleted)
+        .filter(t => {
+          const tDate = new Date(t.date);
+          return tDate.getMonth() === month && tDate.getFullYear() === year;
+        })
+        .reduce((acc, t) => acc + t.amount, 0);
+        
+      months.push({
+        name: d.toLocaleDateString('pt-BR', { month: 'short' }),
+        value: total
+      });
+    }
+    return months;
   };
 
   const handleEdit = (card: Card, e: React.MouseEvent) => {
@@ -74,18 +121,18 @@ export const Cards: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex justify-between items-end">
+    <div className="flex flex-col gap-6 lg:gap-8">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white italic">Gestão de Cartões</h1>
-          <p className="text-slate-500">Control de limites e faturas centralizado.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white italic">Seus Cartões</h1>
+          <p className="text-sm text-slate-500">Gestão de limites e controle de faturas.</p>
         </div>
         <button 
           onClick={handleAddNew}
-          className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/90 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+          className="w-full sm:w-auto h-12 sm:h-10 px-6 bg-brand-primary hover:bg-brand-primary/90 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
         >
           <Plus className="w-4 h-4" />
-          Adicionar Cartão
+          Novo Cartão
         </button>
       </header>
 
@@ -93,6 +140,8 @@ export const Cards: React.FC = () => {
         {cards.map((card, i) => {
           const available = getAvailableLimit(card);
           const usage = getUsagePercentage(card);
+          const monthlySpent = getMonthlySpent(card);
+          const evolution = getSpendingEvolution(card);
           
           return (
             <motion.div
@@ -101,7 +150,7 @@ export const Cards: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.1 }}
               onClick={() => handleViewDetail(card)}
-              className={`card-gradient min-h-[220px] rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:shadow-2xl hover:shadow-brand-primary/10 transition-all border border-white/5`}
+              className={`card-gradient min-h-[300px] rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden group cursor-pointer hover:shadow-2xl hover:shadow-brand-primary/10 transition-all border border-white/5`}
             >
               <div className="absolute top-0 right-0 p-6 opacity-20 rotate-12 group-hover:rotate-0 transition-transform duration-500">
                 <CardIcon className="w-24 h-24" />
@@ -110,62 +159,107 @@ export const Cards: React.FC = () => {
               <div className="flex justify-between items-start relative z-10">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 mb-1">{card.bank}</p>
-                  <p className="text-lg font-mono tracking-widest text-white uppercase italic">{card.name}</p>
+                  <p className="text-xl font-mono tracking-widest text-white uppercase italic">{card.name}</p>
                 </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={(e) => handleMoveToTrash(card.id, e)}
-                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-rose-500/80 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                    title="Excluir"
-                  >
-                    <Trash2 className="w-4 h-4 text-white" />
-                  </button>
-                  <div className="w-12 h-8 bg-white/20 backdrop-blur-md rounded border border-white/30 flex items-center justify-center">
-                    <Wifi className="w-5 h-5 text-white/50 rotate-90" />
+                <div className="flex gap-4 items-start">
+                  <div className="h-10 w-24 bg-black/20 backdrop-blur-sm rounded-xl p-1.5 transition-all flex flex-col justify-end">
+                    <div className="flex-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={evolution}>
+                          <Bar 
+                            dataKey="value" 
+                            radius={[2, 2, 0, 0]}
+                            isAnimationActive={false}
+                          >
+                            {evolution.map((_entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={index === 2 ? '#818cf8' : 'rgba(255,255,255,0.1)'} 
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex justify-between px-1">
+                      {evolution.map((m, idx) => (
+                        <span key={idx} className="text-[6px] font-bold text-white/20 uppercase">{m.name.replace('.', '')}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => handleMoveToTrash(card.id, e)}
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-rose-500/80 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                      title="Excluir"
+                    >
+                      <Trash2 className="w-4 h-4 text-white" />
+                    </button>
+                    <div className="w-12 h-8 bg-white/20 backdrop-blur-md rounded border border-white/30 flex items-center justify-center">
+                      <Wifi className="w-5 h-5 text-white/50 rotate-90" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="relative z-10 space-y-4">
-                <div className="flex justify-between items-end">
+              <div className="relative z-10 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-tighter text-white/60 leading-none mb-1">Limite Disponível</p>
-                    <p className="text-2xl font-bold text-white">R$ {available.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-white/40 mb-1">Gasto no Mês</p>
+                    <p className="text-lg font-black text-white">R$ {monthlySpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-tighter text-white/60 leading-none mb-1">Vencimento</p>
-                    <p className="text-sm font-bold text-white">Dia {card.dueDay}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-white/40 mb-1">Disponível</p>
+                    <p className="text-lg font-black text-indigo-300">R$ {available.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden shadow-inner">
+                  <div className="flex justify-between items-end">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-white/40">Uso do Limite Total</p>
+                      {evolution[2].value > evolution[1].value && (
+                        <div className="flex items-center text-[8px] font-bold text-rose-400 gap-0.5">
+                          <TrendingUp className="w-2 h-2" />
+                          <span>+</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-black text-white">R$ {card.limit.toLocaleString('pt-BR')}</p>
+                  </div>
+                  <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden shadow-inner border border-white/5">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${usage}%` }}
-                      className="h-full bg-white shadow-[0_0_10px_white]" 
+                      className={`h-full shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-colors duration-500 ${
+                        usage > 90 ? 'bg-rose-400' : usage > 70 ? 'bg-amber-400' : 'bg-white'
+                      }`}
                     />
                   </div>
-                  
-                  <div className="flex gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewDetail(card);
-                      }}
-                      className="flex-1 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2"
-                    >
-                      <Eye className="w-3 h-3" />
-                      Ver Detalhes
-                    </button>
-                    <button
-                      onClick={(e) => handleEdit(card, e)}
-                      className="flex-1 py-2 bg-brand-primary/20 hover:bg-brand-primary/40 backdrop-blur-md border border-brand-primary/30 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                      Editar
-                    </button>
+                  <div className="flex justify-between text-[8px] font-bold uppercase tracking-[0.2em] text-white/30">
+                    <span>{usage}% utilizado</span>
+                    <span>Vence dia {card.dueDay}</span>
                   </div>
+                </div>
+
+                <div className="flex gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 duration-300">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewDetail(card);
+                    }}
+                    className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-xl text-[9px] font-black uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Expandir
+                  </button>
+                  <button
+                    onClick={(e) => handleEdit(card, e)}
+                    className="flex-1 py-2.5 bg-brand-primary/20 hover:bg-brand-primary/40 backdrop-blur-md border border-brand-primary/30 rounded-xl text-[9px] font-black uppercase tracking-widest text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Configurar
+                  </button>
                 </div>
               </div>
             </motion.div>

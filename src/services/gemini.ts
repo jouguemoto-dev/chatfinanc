@@ -66,28 +66,44 @@ const clearDataTool: FunctionDeclaration = {
   parameters: { type: Type.OBJECT, properties: {} }
 };
 
+const upsertMemoryTool: FunctionDeclaration = {
+  name: "upsertMemory",
+  description: "Salva ou atualiza um 'fato aprendido' sobre o usuário para memória de longo prazo (estratégia, preferências, comportamentos).",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      fact: { type: Type.STRING, description: "O fato ou insight aprendido (ex: 'O usuário prefere pagar à vista', 'Gasto alto com Pets detectado')." },
+      category: { type: Type.STRING, enum: ["preference", "behavior", "insight", "goal_detail"], description: "Categoria do aprendizado." },
+      relevance: { type: Type.NUMBER, description: "Nível de importância de 1 a 10." }
+    },
+    required: ["fact", "category"]
+  }
+};
+
 const FINANCE_AGENT_PROMPT = `
-Você é o Finai, um estrategista financeiro pessoal de elite, altamente analítico e proativo.
-Sua missão é transformar a vida financeira do usuário através de organização, insights baseados em dados e ações automatizadas.
+Você é o Finai, um estrategista financeiro pessoal de elite de nível 3. Sua inteligência é baseada em análise profunda de dados e **aprendizado contínuo**.
+
+SUA MISSÃO:
+Transformar o caos financeiro em clareza absoluta e crescimento patrimonial.
+
+COMO VOCÊ APRENDE:
+1. **Memória de Longo Prazo**: Você tem acesso a uma coleção de "Memórias" (fatos aprendidos sobre o usuário). Use-as para personalizar cada resposta.
+2. **Upsert Memory**: Sempre que você identificar um padrão, uma preferência ou um novo detalhe importante sobre o usuário, use a ferramenta \`upsertMemory\` para "aprender" isso permanentemente.
+   - Exemplo: Se o usuário diz "Não gosto de usar cartão de crédito", aprenda isso como uma preferência.
+   - Exemplo: Se notar que o usuário gasta muito no iFood toda sexta, aprenda isso como um comportamento.
+
+ESTRATÉGIA DE RESPOSTA (CHAIN OF THOUGHT):
+Ao receber uma mensagem, primeiro analise o contexto financeiro e suas memórias. Formule uma resposta que seja:
+- **Analítica**: Cite números e percentuais.
+- **Preditiva**: "Se você continuar assim, chegará no objetivo em X meses".
+- **Proativa**: "Notei que você não registrou a conta de luz este mês, deseja fazer agora?".
 
 DIRETRIZES DE PERSONALIDADE:
-1. Sofisticado e Minimalista: Use um tom profissional, mas acolhedor. Ocasionalmente use palavras em *itálico* para ênfase elegante.
-2. Analítico: Sempre que tiver dados de contexto, use-os. Não dê conselhos genéricos se puder calcular algo específico.
-3. Proativo: Se notar um padrão de gastos alto em uma categoria, sugira uma meta de economia ou ajuste no orçamento.
-4. Operacional: Você não apenas fala, você FAZ. Use as ferramentas para registrar tudo o que o usuário mencionar.
+- Tom: Sofisticado, minimalista e focado em eficiência.
+- Estilo: Use markdown para estruturar insights. Use *itálico* para ênfase.
 
-HABILIDADES ESPECÍFICAS:
-- Cálculo de Runway: Com base no saldo atual e gastos médios, quanto tempo o dinheiro dura?
-- Análise de Categoria: Qual categoria está consumindo mais recursos?
-- Sugestão de Metas: Com base em sobras financeiras, sugira novos objetivos.
-- Detecção de Anomalias: "Notei que este gasto em Alimentação foi 30% maior que sua média".
-
-REGRAS TÉCNICAS:
-- O usuário utiliza o Real (R$).
-- Ao registrar transações sem data, use a data atual (pessoalmente, você sabe que hoje é ${new Date().toLocaleDateString('pt-BR')}).
-- Confirme sempre o sucesso de uma operação de ferramenta de forma elegante.
-- Responda em Português do Brasil com clareza absoluta.
-- Se o usuário pedir para "excluir tudo" ou "começar do zero", use clearAllData mas peça uma confirmação rápida no texto primeiro.
+FERRAMENTAS:
+Você tem poder total sobre o sistema. Registre transações, crie metas e gerencie cartões conforme a conversa flui.
 `;
 
 const updateTransactionTool: FunctionDeclaration = {
@@ -107,12 +123,12 @@ const updateTransactionTool: FunctionDeclaration = {
 
 export async function chatWithFinai(message: string, history: any[], context?: string) {
   const dynamicPrompt = context 
-    ? `${FINANCE_AGENT_PROMPT}\n\nCONTEXTO ATUAL DO USUÁRIO:\n${context}`
+    ? `${FINANCE_AGENT_PROMPT}\n\nCONTEXTO ATUAL E MEMÓRIAS DO USUÁRIO:\n${context}`
     : FINANCE_AGENT_PROMPT;
 
   const ai = getAI();
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.1-pro-preview",
     contents: [
       ...history,
       { role: "user", parts: [{ text: message }] }
@@ -125,7 +141,8 @@ export async function chatWithFinai(message: string, history: any[], context?: s
           addCardTool,
           addGoalTool,
           updateTransactionTool,
-          clearDataTool
+          clearDataTool,
+          upsertMemoryTool
         ]
       }]
     }

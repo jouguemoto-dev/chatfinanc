@@ -15,7 +15,8 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
   const { user } = useAuth();
   const { 
     addTransaction, updateTransaction, addCard, addGoal, clearAllData,
-    transactions, cards, goals 
+    upsertMemory,
+    transactions, cards, goals, memories 
   } = useFinance();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -28,32 +29,39 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
       return;
     }
     setMessages([
-      { role: 'assistant', content: `Olá ${user?.displayName || 'Usuário'}! Analisei seus registros financeiros e estou pronto para ajudar. O que deseja fazer?`, timestamp: new Date() }
+      { role: 'assistant', content: `Olá ${user?.displayName || 'Usuário'}! Analisei seus registros financeiros e memórias. Estou pronto para ajudar com insights estratégicos. O que deseja fazer?`, timestamp: new Date() }
     ]);
   }, [user]);
 
   const getFinancialContext = () => {
-    const activeTransactions = transactions.slice(0, 20).map(t => 
-      `- ID: ${t.id} | ${t.date}: ${t.description} (R$ ${t.amount}) [${t.type === 'income' ? 'Receita' : 'Depesa'}] Category: ${t.category}`
+    const activeTransactions = (transactions || []).slice(0, 30).map(t => 
+      `- ID: ${t?.id} | ${t?.date}: ${t?.description} (R$ ${t?.amount}) [${t?.type === 'income' ? 'Receita' : 'Depesa'}] Category: ${t?.category}`
     ).join('\n');
 
-    const activeCards = cards.map(c => 
-      `- ID: ${c.id} | ${c.name} (${c.bank}): Limite R$ ${c.limit}, Vence dia ${c.dueDay}`
+    const activeCards = (cards || []).map(c => 
+      `- ID: ${c?.id} | ${c?.name} (${c?.bank}): Limite R$ ${c?.limit}, Vence dia ${c?.dueDay}`
     ).join('\n');
 
-    const activeGoals = goals.map(g => 
-      `- ID: ${g.id} | ${g.name}: Alvo R$ ${g.targetAmount}, Atual R$ ${g.currentAmount}, Vence em ${g.dueDate}`
+    const activeGoals = (goals || []).map(g => 
+      `- ID: ${g?.id} | ${g?.name}: Alvo R$ ${g?.targetAmount}, Atual R$ ${g?.currentAmount}, Vence em ${g?.dueDate}`
+    ).join('\n');
+
+    const learnedMemories = (memories || []).map(m => 
+      `- [${m.category.toUpperCase()}]: ${m.fact} (Relevância: ${m.relevance})`
     ).join('\n');
 
     return `
-    TRANSAÇÕES RECENTES (últimas 20):
+    DADOS FINANCEIROS RECENTES:
     ${activeTransactions || 'Nenhuma transação registrada.'}
 
-    CARTÕES:
+    ATIVOS (CARTÕES):
     ${activeCards || 'Nenhum cartão registrado.'}
 
-    OBJETIVOS/METAS:
+    OBJETIVOS ESTRATÉGICOS:
     ${activeGoals || 'Nenhum objetivo registrado.'}
+
+    MEMÓRIA DE LONGO PRAZO (Aprendizados):
+    ${learnedMemories || 'Nenhum aprendizado prévio.'}
     `;
   };
 
@@ -86,7 +94,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
       
       const assistantMessage: ChatMessage = { 
         role: 'assistant', 
-        content: response.text || (response.functionCalls && response.functionCalls.length > 0 ? "Processando sua solicitação..." : ""), 
+        content: response.text || (response.functionCalls && response.functionCalls.length > 0 ? "Processando e aprendendo com sua solicitação..." : ""), 
         timestamp: new Date() 
       };
       
@@ -110,6 +118,8 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
             await addGoal(args);
           } else if (call.name === 'clearAllData') {
             await clearAllData();
+          } else if (call.name === 'upsertMemory') {
+            await upsertMemory(args);
           }
         }
       }
@@ -132,7 +142,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
   };
 
   return (
-    <div className={`flex flex-col h-full bg-surface ${isSidebar ? '' : 'p-4 md:p-8'}`}>
+    <div className={`flex flex-col h-full bg-surface ${isSidebar ? '' : 'rounded-2xl overflow-hidden shadow-2xl border border-white/5'}`}>
       <div className="p-6 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-brand-primary/20 flex items-center justify-center">
@@ -188,13 +198,18 @@ export const AIChat: React.FC<AIChatProps> = ({ isSidebar }) => {
         )}
         
         {isSidebar && (
-          <div className="mt-auto bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span className="text-xs font-bold text-amber-500 uppercase">Insight IA</span>
+          <div className="mt-auto bg-gradient-to-br from-indigo-500/10 to-brand-primary/10 border border-brand-primary/20 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-brand-primary" />
+                <span className="text-xs font-bold text-brand-primary uppercase tracking-tighter">Insight de Memória</span>
+              </div>
+              {memories.length > 0 && <span className="text-[8px] bg-brand-primary/20 px-1.5 py-0.5 rounded text-brand-primary font-bold uppercase">{memories.length} Ativos</span>}
             </div>
             <p className="text-xs leading-relaxed text-slate-300">
-              Economize R$ 120,00 este mês limitando gastos de lazer aos fins de semana.
+              {memories.length > 0 
+                ? memories[0].fact 
+                : "Comece a conversar para que eu aprenda seus padrões e ofereça insights personalizados."}
             </p>
           </div>
         )}
